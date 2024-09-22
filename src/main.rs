@@ -5,6 +5,7 @@ use std::{
     fs::read_dir,
     io::{Read, Write},
     path::Path,
+    process::Command,
 };
 use whoami::username;
 type FileObj = std::fs::File;
@@ -87,6 +88,13 @@ impl Shell {
                 },
                 Type::Folder(mut folder) => match method.as_str() {
                     "Item-List" => Some(Type::Array(folder.item_list())),
+                    _ => None,
+                },
+                Type::App(mut app) => match method.as_str() {
+                    "Start" => {
+                        app.start();
+                        None
+                    }
                     _ => None,
                 },
                 Type::Number(i) => match method.as_str() {
@@ -288,10 +296,11 @@ fn tokenize_program(input: String) -> Vec<Vec<String>> {
 
 #[derive(Debug, Clone)]
 enum Type {
-    Number(f64),
-    String(String),
     File(File),
     Folder(Folder),
+    App(App),
+    Number(f64),
+    String(String),
     Array(Vec<Type>),
 }
 
@@ -336,7 +345,13 @@ impl Type {
             source.remove(source.rfind(')').unwrap_or_default());
             Some(Type::Folder(Folder::new(
                 Type::parse(source, memory)?.is_string()?,
-            )?))
+            )))
+        } else if source.starts_with("App(") && source.ends_with(')') {
+            source = source.replacen("App(", "", 1);
+            source.remove(source.rfind(')').unwrap_or_default());
+            Some(Type::App(App::new(
+                Type::parse(source, memory)?.is_string()?,
+            )))
         } else {
             Some(Type::String(source))
         }
@@ -401,8 +416,8 @@ struct Folder {
 }
 
 impl Folder {
-    fn new(path: String) -> Option<Folder> {
-        Some(Folder { path })
+    fn new(path: String) -> Folder {
+        Folder { path }
     }
 
     fn item_list(&mut self) -> Vec<Type> {
@@ -420,5 +435,24 @@ impl Folder {
             }
         }
         list
+    }
+}
+
+#[derive(Debug, Clone)]
+struct App {
+    name: String,
+}
+
+impl App {
+    fn new(name: String) -> App {
+        App { name }
+    }
+
+    fn start(&mut self) {
+        Command::new(self.name.clone())
+            .spawn()
+            .unwrap()
+            .wait()
+            .unwrap();
     }
 }

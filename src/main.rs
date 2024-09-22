@@ -31,17 +31,33 @@ fn main() {
         if order.is_empty() {
             continue;
         }
-        if let Some(result) = sh.eval(order) {
+        if let Some(result) = sh.run(order) {
             println!("{:?}", result);
         }
     }
 }
 
+#[derive(Debug, Clone)]
 struct Shell {
     user: String,
     memory: HashMap<String, Type>,
 }
 impl Shell {
+    fn run(&mut self, source: String) -> Option<Type> {
+        let source = tokenize_program(source);
+        let mut result: Option<Type> = None;
+        for lines in source {
+            if lines.len() == 2 {
+                result = self.eval(lines[1].to_string());
+                self.memory
+                    .insert(lines[0].trim().to_string(), result.clone()?);
+            } else {
+                result = self.eval(lines[0].to_string());
+            }
+        }
+        result
+    }
+
     fn eval(&mut self, program: String) -> Option<Type> {
         let line = tokenize_expr(program);
         let obj = Type::parse(line[0].clone(), self.memory.clone())?;
@@ -180,6 +196,92 @@ fn tokenize_expr(input: String) -> Vec<String> {
 
     if !(in_parentheses != 0 || in_quote || current_token.is_empty()) {
         tokens.push(current_token);
+    }
+    tokens
+}
+
+fn tokenize_program(input: String) -> Vec<Vec<String>> {
+    let mut tokens: Vec<Vec<String>> = Vec::new();
+    let mut current_token = String::new();
+    let mut after_equal = String::new();
+    let mut is_equal = false;
+    let mut in_parentheses: usize = 0;
+    let mut in_quote = false;
+
+    for c in input.chars() {
+        match c {
+            '{' if !in_quote => {
+                if is_equal {
+                    after_equal.push(c);
+                } else {
+                    current_token.push(c);
+                }
+                in_parentheses += 1;
+            }
+            '}' if !in_quote => {
+                if is_equal {
+                    after_equal.push(c);
+                } else {
+                    current_token.push(c);
+                }
+                in_parentheses -= 1;
+            }
+            ';' if !in_quote => {
+                if in_parentheses != 0 {
+                    if is_equal {
+                        after_equal.push(c);
+                    } else {
+                        current_token.push(c);
+                    }
+                } else if !current_token.is_empty() {
+                    if is_equal {
+                        is_equal = false;
+                        tokens.push(vec![current_token.clone(), after_equal.clone()]);
+                        current_token.clear();
+                        after_equal.clear();
+                    } else {
+                        tokens.push(vec![current_token.clone()]);
+                        current_token.clear();
+                    }
+                }
+            }
+            '=' if !in_quote => {
+                if in_parentheses != 0 {
+                    if is_equal {
+                        after_equal.push(c);
+                    } else {
+                        current_token.push(c);
+                    }
+                } else {
+                    is_equal = true;
+                }
+            }
+            '"' => {
+                in_quote = !in_quote;
+                if is_equal {
+                    after_equal.push(c);
+                } else {
+                    current_token.push(c);
+                }
+            }
+            _ => {
+                if is_equal {
+                    after_equal.push(c);
+                } else {
+                    current_token.push(c);
+                }
+            }
+        }
+    }
+
+    if in_parentheses == 0 && !current_token.is_empty() {
+        if is_equal {
+            tokens.push(vec![current_token.clone(), after_equal]);
+            current_token.clear();
+        } else {
+            tokens.push(vec![current_token.clone()]);
+            current_token.clear();
+        }
     }
     tokens
 }

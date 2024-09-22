@@ -22,12 +22,12 @@ fn main() {
     };
 
     loop {
-        let order = rl.readline("> ").unwrap().trim().to_string();
+        let order = rl.readline(">>> ").unwrap().trim().to_string();
         if order.is_empty() {
             continue;
         }
         if let Some(result) = sh.run(order) {
-            println!("{:?}", result);
+            println!("{}", result.display());
         }
     }
 }
@@ -410,7 +410,22 @@ impl Type {
         }
     }
 
-    fn display(self) -> String {}
+    fn display(&self) -> String {
+        match self {
+            Type::App(App { name }) => format!("App( {name} )"),
+            Type::File(File { path }) => format!("File( {path} )"),
+            Type::Folder(Folder { path }) => format!("File( {path} )"),
+            Type::Number(n) => n.to_string(),
+            Type::String(s) => format!("\"{s}\""),
+            Type::Array(a) => format!(
+                "[{}]",
+                a.iter()
+                    .map(|x| x.display())
+                    .collect::<Vec<String>>()
+                    .join(" ")
+            ),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

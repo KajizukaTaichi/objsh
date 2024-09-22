@@ -549,11 +549,11 @@ impl App {
     }
 
     fn start(&mut self) {
-        Command::new(self.name.clone())
-            .spawn()
-            .unwrap()
-            .wait()
-            .unwrap();
+        if let Ok(mut app) = Command::new(self.name.clone()).spawn() {
+            app.wait().unwrap();
+        } else {
+            open(self.name.clone()).unwrap();
+        }
     }
 
     fn start_with_arg(&mut self, arg: Vec<String>) {

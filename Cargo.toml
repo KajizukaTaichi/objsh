@@ -4,6 +4,7 @@ version = "0.2.0"
 edition = "2021"
 license = "MIT"
 authors = ["梶塚太智<kajizukataichi@outlook.jp>"]
+repository = "https://github.com/KajizukaTaichi/objsh"
 description = "Object oriented shell"
 
 [dependencies]

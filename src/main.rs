@@ -408,7 +408,16 @@ impl Folder {
     fn item_list(&mut self) -> Vec<Type> {
         let mut list = vec![];
         for entry in read_dir(self.path.clone()).unwrap() {
-            list.push(Type::String(format!("{}", entry.unwrap().path().display())));
+            let path = &format!("{}", entry.unwrap().path().display());
+            if Path::new(path).is_file() {
+                list.push(Type::File(File {
+                    path: path.to_string(),
+                }))
+            } else if Path::new(path).is_dir() {
+                list.push(Type::Folder(Folder {
+                    path: path.to_string(),
+                }))
+            }
         }
         list
     }

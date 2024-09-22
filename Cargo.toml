@@ -2,6 +2,9 @@
 name = "objsh"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+author = "梶塚太智<kajizukataichi@outlook.jp>"
+description = "Object oriented shell"
 
 [dependencies]
 opener = "0.7.2"

@@ -1,4 +1,6 @@
 # Objective Shell
-Object oriented shell
+A pure object oriented command-line shell
 
-![image](https://github.com/user-attachments/assets/5893d09a-b334-4422-ae12-b71f3e14c1f9)
+### Screen-shot
+<img width="722" alt="image" src="https://github.com/user-attachments/assets/1c14467e-0788-4d17-b052-4228d109d96d">
+

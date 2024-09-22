@@ -2,7 +2,7 @@ use opener::open;
 use rustyline::DefaultEditor;
 use std::{
     collections::HashMap,
-    fs::read_dir,
+    fs::{self, read_dir},
     io::{Read, Write},
     path::Path,
     process::Command,
@@ -86,10 +86,26 @@ impl Shell {
                         file.write(args[0].is_string()?);
                         None
                     }
+                    "Rename" => {
+                        file.rename(args[0].is_string()?);
+                        None
+                    }
+                    "Delete" => {
+                        file.delete();
+                        None
+                    }
                     _ => None,
                 },
                 Type::Folder(mut folder) => match method.as_str() {
                     "Item-List" => Some(Type::Array(folder.item_list())),
+                    "Rename" => {
+                        folder.rename(args[0].is_string()?);
+                        None
+                    }
+                    "Delete" => {
+                        folder.delete();
+                        None
+                    }
                     _ => None,
                 },
                 Type::App(mut app) => match method.as_str() {
@@ -398,6 +414,9 @@ fn open_file(path: String) -> FileObj {
 
 impl File {
     fn new(path: String) -> Option<File> {
+        if !Path::new(&path).exists() {
+            FileObj::create(path.clone()).unwrap();
+        }
         Some(File { path })
     }
 
@@ -413,6 +432,14 @@ impl File {
         buf.to_owned()
     }
 
+    fn delete(&mut self) {
+        fs::remove_file(self.path.clone()).unwrap();
+    }
+
+    fn rename(&mut self, name: String) {
+        fs::rename(self.path.clone(), name).unwrap();
+    }
+
     fn open(&mut self) {
         open(self.path.clone()).unwrap();
     }
@@ -425,6 +452,9 @@ struct Folder {
 
 impl Folder {
     fn new(path: String) -> Folder {
+        if !Path::new(&path).exists() {
+            fs::create_dir(path.clone()).unwrap();
+        }
         Folder { path }
     }
 
@@ -443,6 +473,14 @@ impl Folder {
             }
         }
         list
+    }
+
+    fn delete(&mut self) {
+        fs::remove_dir_all(self.path.clone()).unwrap();
+    }
+
+    fn rename(&mut self, name: String) {
+        fs::rename(self.path.clone(), name).unwrap();
     }
 }
 

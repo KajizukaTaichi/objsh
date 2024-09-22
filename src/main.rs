@@ -92,7 +92,7 @@ impl Shell {
                 },
                 Type::App(mut app) => match method.as_str() {
                     "Start" => {
-                        app.start();
+                        app.start(args.get(0)?.is_string()?);
                         None
                     }
                     _ => None,
@@ -448,8 +448,9 @@ impl App {
         App { name }
     }
 
-    fn start(&mut self) {
+    fn start(&mut self, arg: String) {
         Command::new(self.name.clone())
+            .arg(arg)
             .spawn()
             .unwrap()
             .wait()

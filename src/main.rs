@@ -68,7 +68,7 @@ impl Shell {
 
             std::env::set_current_dir(
                 if let Type::Folder(Folder { path }) = self.memory.get("Current-Folder")? {
-                    path.to_string()
+                    path
                 } else {
                     return None;
                 },
@@ -447,6 +447,15 @@ impl File {
         if !Path::new(&path).exists() {
             FileObj::create(path.clone()).unwrap();
         }
+        let path = if Path::new(&path).is_relative() {
+            fs::canonicalize(&path)
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_string()
+        } else {
+            path
+        };
         Some(File { path })
     }
 
@@ -487,6 +496,15 @@ impl Folder {
         if !Path::new(&path).exists() {
             fs::create_dir(path.clone()).unwrap();
         }
+        let path = if Path::new(&path).is_relative() {
+            fs::canonicalize(&path)
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_string()
+        } else {
+            path
+        };
         Folder { path }
     }
 

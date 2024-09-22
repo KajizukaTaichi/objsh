@@ -114,9 +114,9 @@ impl Shell {
                 },
                 Type::App(mut app) => match method.as_str() {
                     "Start" => {
-                        if let Some(arg) = args.get(0..) {
+                        if args.len() >= 1 {
                             app.start_with_arg(
-                                arg.iter()
+                                args.iter()
                                     .map(|x| x.get_string().unwrap_or_default())
                                     .collect(),
                             );

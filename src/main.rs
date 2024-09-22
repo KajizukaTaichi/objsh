@@ -7,14 +7,12 @@ use std::{
     path::Path,
     process::Command,
 };
-use whoami::username;
 type FileObj = std::fs::File;
 
 fn main() {
     println!("Objective Shell");
     let mut rl = DefaultEditor::new().unwrap();
     let mut sh = Shell {
-        user: username(),
         memory: HashMap::from([(
             "Current-Folder".to_string(),
             Type::Folder(Folder {
@@ -24,11 +22,7 @@ fn main() {
     };
 
     loop {
-        let order = rl
-            .readline(&format!("{}> ", sh.user))
-            .unwrap()
-            .trim()
-            .to_string();
+        let order = rl.readline("> ").unwrap().trim().to_string();
         if order.is_empty() {
             continue;
         }
@@ -40,7 +34,6 @@ fn main() {
 
 #[derive(Debug, Clone)]
 struct Shell {
-    user: String,
     memory: HashMap<String, Type>,
 }
 impl Shell {
@@ -73,6 +66,15 @@ impl Shell {
                 new
             };
 
+            std::env::set_current_dir(
+                if let Type::Folder(Folder { path }) = self.memory.get("Current-Folder")? {
+                    path.to_string()
+                } else {
+                    return None;
+                },
+            )
+            .unwrap();
+
             match obj {
                 Type::File(mut file) => match method.as_str() {
                     "Read-String" => Some(Type::String(file.read())),
@@ -92,15 +94,6 @@ impl Shell {
                 },
                 Type::App(mut app) => match method.as_str() {
                     "Start" => {
-                        app.preprocessing(
-                            if let Type::Folder(Folder { path }) =
-                                self.memory.get("Current-Folder")?
-                            {
-                                path.to_string()
-                            } else {
-                                return None;
-                            },
-                        );
                         if let Some(arg) = args.get(0..) {
                             app.start_with_arg(
                                 arg.iter().map(|x| x.is_string().unwrap()).collect(),
@@ -335,11 +328,7 @@ impl Type {
         } else if source.starts_with('(') && source.ends_with(')') {
             source.remove(source.find('(').unwrap_or_default());
             source.remove(source.rfind(')').unwrap_or_default());
-            Shell {
-                user: "System".to_string(),
-                memory,
-            }
-            .eval(source.to_string())
+            Shell { memory }.eval(source.to_string())
         } else if source.starts_with('[') && source.ends_with(']') {
             Some(Type::Array({
                 source.remove(source.find('[').unwrap_or_default());
@@ -375,6 +364,10 @@ impl Type {
     fn is_string(&self) -> Option<String> {
         if let Type::String(s) = self {
             Some(s.to_string())
+        } else if let Type::File(File { path }) = self {
+            Some(path.to_string())
+        } else if let Type::Folder(Folder { path }) = self {
+            Some(path.to_string())
         } else {
             None
         }
@@ -461,10 +454,6 @@ struct App {
 impl App {
     fn new(name: String) -> App {
         App { name }
-    }
-
-    fn preprocessing(&mut self, path: String) {
-        std::env::set_current_dir(path).unwrap();
     }
 
     fn start(&mut self) {

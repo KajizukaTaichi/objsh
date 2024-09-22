@@ -367,19 +367,19 @@ impl Type {
             source = source.replacen("File(", "", 1);
             source.remove(source.rfind(')').unwrap_or_default());
             Some(Type::File(File::new(
-                Type::parse(source, memory)?.get_string()?,
+                Shell { memory }.eval(source.to_string())?.get_string()?,
             )?))
         } else if source.starts_with("Folder(") && source.ends_with(')') {
             source = source.replacen("Folder(", "", 1);
             source.remove(source.rfind(')').unwrap_or_default());
             Some(Type::Folder(Folder::new(
-                Type::parse(source, memory)?.get_string()?,
+                Shell { memory }.eval(source.to_string())?.get_string()?,
             )))
         } else if source.starts_with("App(") && source.ends_with(')') {
             source = source.replacen("App(", "", 1);
             source.remove(source.rfind(')').unwrap_or_default());
             Some(Type::App(App::new(
-                Type::parse(source, memory)?.get_string()?,
+                Shell { memory }.eval(source.to_string())?.get_string()?,
             )))
         } else {
             Some(Type::String(source))

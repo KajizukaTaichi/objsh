@@ -13,12 +13,19 @@ fn main() {
     println!("Objective Shell");
     let mut rl = DefaultEditor::new().unwrap();
     let mut sh = Shell {
-        memory: HashMap::from([(
-            "Current-Folder".to_string(),
-            Type::Folder(Folder {
-                path: format!("{}", std::env::current_dir().unwrap().display()),
-            }),
-        )]),
+        memory: HashMap::from([
+            (
+                "Current-Folder".to_string(),
+                Type::Folder(Folder {
+                    path: format!("{}", std::env::current_dir().unwrap().display()),
+                }),
+            ),
+            (
+                "ls".to_string(),
+                Type::Alias("Current-Folder Item-List".to_string()),
+            ),
+            ("pwd".to_string(), Type::Alias("Current-Folder".to_string())),
+        ]),
     };
 
     loop {
@@ -36,6 +43,7 @@ fn main() {
 struct Shell {
     memory: HashMap<String, Type>,
 }
+
 impl Shell {
     fn run(&mut self, source: String) -> Option<Type> {
         let source = tokenize_program(source);
@@ -53,7 +61,18 @@ impl Shell {
     }
 
     fn eval(&mut self, program: String) -> Option<Type> {
-        let line = tokenize_expr(program);
+        let line = {
+            let mut line: Vec<String> = Vec::new();
+            for item in tokenize_expr(program) {
+                let result = Type::parse(item, self.memory.clone())?;
+                if let Type::Alias(alias) = result {
+                    line.push(alias)
+                } else {
+                    line.push(result.display())
+                }
+            }
+            tokenize_expr(line.join(" "))
+        };
         let obj = Type::parse(line[0].clone(), self.memory.clone())?;
         if line.len() > 1 {
             let method = line[1].clone();
@@ -145,6 +164,7 @@ impl Shell {
                     "Length" => Some(Type::Number(array.len() as f64)),
                     _ => None,
                 },
+                _ => None,
             }
         } else {
             Some(obj)
@@ -331,6 +351,8 @@ enum Type {
     Number(f64),
     String(String),
     Array(Vec<Type>),
+    Alias(String),
+    Symbol(String),
 }
 
 impl Type {
@@ -363,6 +385,10 @@ impl Type {
                     .map(|x| Type::parse(x.to_string(), memory.clone()).unwrap())
                     .collect()
             }))
+        } else if source.starts_with("Alias(") && source.ends_with(')') {
+            source = source.replacen("Alias(", "", 1);
+            source.remove(source.rfind(')').unwrap_or_default());
+            Some(Type::Alias(source))
         } else if source.starts_with("File(") && source.ends_with(')') {
             source = source.replacen("File(", "", 1);
             source.remove(source.rfind(')').unwrap_or_default());
@@ -382,7 +408,7 @@ impl Type {
                 Shell { memory }.eval(source.to_string())?.get_string()?,
             )))
         } else {
-            Some(Type::String(source))
+            Some(Type::Symbol(source))
         }
     }
 
@@ -391,6 +417,10 @@ impl Type {
             Some(s.to_string())
         } else if let Type::Number(n) = self {
             Some(n.to_string())
+        } else if let Type::Alias(a) = self {
+            Some(a.to_string())
+        } else if let Type::Symbol(s) = self {
+            Some(s.to_string())
         } else if let Type::File(File { path }) = self {
             Some(path.to_string())
         } else if let Type::Folder(Folder { path }) = self {
@@ -424,6 +454,8 @@ impl Type {
                     .collect::<Vec<String>>()
                     .join(" ")
             ),
+            Type::Alias(a) => format!("Alias( {a} )"),
+            Type::Symbol(s) => s.to_string(),
         }
     }
 }

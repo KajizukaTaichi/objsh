@@ -92,7 +92,22 @@ impl Shell {
                 },
                 Type::App(mut app) => match method.as_str() {
                     "Start" => {
-                        app.start(args.get(0)?.is_string()?);
+                        app.preprocessing(
+                            if let Type::Folder(Folder { path }) =
+                                self.memory.get("Current-Folder")?
+                            {
+                                path.to_string()
+                            } else {
+                                return None;
+                            },
+                        );
+                        if let Some(arg) = args.get(0..) {
+                            app.start_with_arg(
+                                arg.iter().map(|x| x.is_string().unwrap()).collect(),
+                            );
+                        } else {
+                            app.start();
+                        }
                         None
                     }
                     _ => None,
@@ -448,9 +463,21 @@ impl App {
         App { name }
     }
 
-    fn start(&mut self, arg: String) {
+    fn preprocessing(&mut self, path: String) {
+        std::env::set_current_dir(path).unwrap();
+    }
+
+    fn start(&mut self) {
         Command::new(self.name.clone())
-            .arg(arg)
+            .spawn()
+            .unwrap()
+            .wait()
+            .unwrap();
+    }
+
+    fn start_with_arg(&mut self, arg: Vec<String>) {
+        Command::new(self.name.clone())
+            .args(arg)
             .spawn()
             .unwrap()
             .wait()

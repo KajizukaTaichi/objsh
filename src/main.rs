@@ -389,6 +389,8 @@ impl Type {
     fn get_string(&self) -> Option<String> {
         if let Type::String(s) = self {
             Some(s.to_string())
+        } else if let Type::Number(n) = self {
+            Some(n.to_string())
         } else if let Type::File(File { path }) = self {
             Some(path.to_string())
         } else if let Type::Folder(Folder { path }) = self {
@@ -407,6 +409,8 @@ impl Type {
             None
         }
     }
+
+    fn display(self) -> String {}
 }
 
 #[derive(Debug, Clone)]

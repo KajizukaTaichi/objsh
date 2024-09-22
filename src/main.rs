@@ -37,10 +37,23 @@ struct Shell {
     memory: HashMap<String, Type>,
 }
 impl Shell {
+    fn set_current_folder(&self) -> Option<()> {
+        std::env::set_current_dir(
+            if let Type::Folder(Folder { path }) = self.memory.get("Current-Folder")? {
+                path
+            } else {
+                return None;
+            },
+        )
+        .unwrap();
+        Some(())
+    }
+
     fn run(&mut self, source: String) -> Option<Type> {
         let source = tokenize_program(source);
         let mut result: Option<Type> = None;
         for lines in source {
+            self.set_current_folder();
             if lines.len() == 2 {
                 result = self.eval(lines[1].to_string());
                 self.memory
@@ -65,15 +78,6 @@ impl Shell {
                 }
                 new
             };
-
-            std::env::set_current_dir(
-                if let Type::Folder(Folder { path }) = self.memory.get("Current-Folder")? {
-                    path
-                } else {
-                    return None;
-                },
-            )
-            .unwrap();
 
             match obj {
                 Type::File(mut file) => match method.as_str() {

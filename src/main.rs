@@ -83,11 +83,11 @@ impl Shell {
                         None
                     }
                     "Write-String" => {
-                        file.write(args[0].is_string()?);
+                        file.write(args[0].get_string()?);
                         None
                     }
                     "Rename" => {
-                        file.rename(args[0].is_string()?);
+                        file.rename(args[0].get_string()?);
                         None
                     }
                     "Delete" => {
@@ -99,7 +99,7 @@ impl Shell {
                 Type::Folder(mut folder) => match method.as_str() {
                     "Item-List" => Some(Type::Array(folder.item_list())),
                     "Rename" => {
-                        folder.rename(args[0].is_string()?);
+                        folder.rename(args[0].get_string()?);
                         None
                     }
                     "Delete" => {
@@ -112,7 +112,9 @@ impl Shell {
                     "Start" => {
                         if let Some(arg) = args.get(0..) {
                             app.start_with_arg(
-                                arg.iter().map(|x| x.is_string().unwrap()).collect(),
+                                arg.iter()
+                                    .map(|x| x.get_string().unwrap_or_default())
+                                    .collect(),
                             );
                         } else {
                             app.start();
@@ -122,14 +124,16 @@ impl Shell {
                     _ => None,
                 },
                 Type::Number(i) => match method.as_str() {
-                    "+" => Some(Type::Number(i + args[0].is_number()?)),
-                    "-" => Some(Type::Number(i - args[0].is_number()?)),
-                    "*" => Some(Type::Number(i * args[0].is_number()?)),
-                    "/" => Some(Type::Number(i / args[0].is_number()?)),
+                    "+" => Some(Type::Number(i + args[0].get_number()?)),
+                    "-" => Some(Type::Number(i - args[0].get_number()?)),
+                    "*" => Some(Type::Number(i * args[0].get_number()?)),
+                    "/" => Some(Type::Number(i / args[0].get_number()?)),
+                    "%" => Some(Type::Number(i % args[0].get_number()?)),
+                    "^" => Some(Type::Number(i.powf(args[0].get_number()?))),
                     _ => None,
                 },
                 Type::String(s) => match method.as_str() {
-                    "+" => Some(Type::String(s + &args[0].is_string()?)),
+                    "+" => Some(Type::String(s + &args[0].get_string()?)),
                     "PrintLn" => {
                         println!("{s}");
                         None
@@ -137,7 +141,8 @@ impl Shell {
                     _ => None,
                 },
                 Type::Array(array) => match method.as_str() {
-                    "Index" => Some(array.get(args[0].is_number()? as usize)?.clone()),
+                    "Index" => Some(array.get(args[0].get_number()? as usize)?.clone()),
+                    "Length" => Some(Type::Number(array.len() as f64)),
                     _ => None,
                 },
             }
@@ -345,6 +350,10 @@ impl Type {
             source.remove(source.find('(').unwrap_or_default());
             source.remove(source.rfind(')').unwrap_or_default());
             Shell { memory }.eval(source.to_string())
+        } else if source.starts_with('{') && source.ends_with('}') {
+            source.remove(source.find('{').unwrap_or_default());
+            source.remove(source.rfind('}').unwrap_or_default());
+            Shell { memory }.run(source.to_string())
         } else if source.starts_with('[') && source.ends_with(']') {
             Some(Type::Array({
                 source.remove(source.find('[').unwrap_or_default());
@@ -358,26 +367,26 @@ impl Type {
             source = source.replacen("File(", "", 1);
             source.remove(source.rfind(')').unwrap_or_default());
             Some(Type::File(File::new(
-                Type::parse(source, memory)?.is_string()?,
+                Type::parse(source, memory)?.get_string()?,
             )?))
         } else if source.starts_with("Folder(") && source.ends_with(')') {
             source = source.replacen("Folder(", "", 1);
             source.remove(source.rfind(')').unwrap_or_default());
             Some(Type::Folder(Folder::new(
-                Type::parse(source, memory)?.is_string()?,
+                Type::parse(source, memory)?.get_string()?,
             )))
         } else if source.starts_with("App(") && source.ends_with(')') {
             source = source.replacen("App(", "", 1);
             source.remove(source.rfind(')').unwrap_or_default());
             Some(Type::App(App::new(
-                Type::parse(source, memory)?.is_string()?,
+                Type::parse(source, memory)?.get_string()?,
             )))
         } else {
             Some(Type::String(source))
         }
     }
 
-    fn is_string(&self) -> Option<String> {
+    fn get_string(&self) -> Option<String> {
         if let Type::String(s) = self {
             Some(s.to_string())
         } else if let Type::File(File { path }) = self {
@@ -389,9 +398,11 @@ impl Type {
         }
     }
 
-    fn is_number(&self) -> Option<f64> {
+    fn get_number(&self) -> Option<f64> {
         if let Type::Number(i) = self {
             Some(*i)
+        } else if let Ok(i) = self.get_string()?.trim().parse::<f64>() {
+            Some(i)
         } else {
             None
         }
@@ -428,20 +439,22 @@ impl File {
 
     fn read(&mut self) -> String {
         let buf = &mut String::new();
-        open_file(self.path.clone()).read_to_string(buf).unwrap();
+        open_file(self.path.clone())
+            .read_to_string(buf)
+            .unwrap_or_default();
         buf.to_owned()
     }
 
     fn delete(&mut self) {
-        fs::remove_file(self.path.clone()).unwrap();
+        fs::remove_file(self.path.clone()).unwrap_or_default();
     }
 
     fn rename(&mut self, name: String) {
-        fs::rename(self.path.clone(), name).unwrap();
+        fs::rename(self.path.clone(), name).unwrap_or_default();
     }
 
     fn open(&mut self) {
-        open(self.path.clone()).unwrap();
+        open(self.path.clone()).unwrap_or_default();
     }
 }
 

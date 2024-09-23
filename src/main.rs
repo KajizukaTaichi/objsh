@@ -90,6 +90,10 @@ impl Shell {
                         file.write(args[0].get_string()?);
                         None
                     }
+                    "Copy" => {
+                        file.copy(args[0].get_string()?);
+                        None
+                    }
                     "Rename" => {
                         file.rename(args[0].get_string()?);
                         None
@@ -102,8 +106,16 @@ impl Shell {
                 },
                 Type::Folder(mut folder) => match method.as_str() {
                     "Item-List" => Some(Type::Array(folder.item_list())),
+                    "Open" => {
+                        folder.open();
+                        None
+                    }
                     "Rename" => {
                         folder.rename(args[0].get_string()?);
+                        None
+                    }
+                    "Copy" => {
+                        folder.copy(args[0].get_string()?);
                         None
                     }
                     "Delete" => {
@@ -477,6 +489,10 @@ impl File {
         buf.to_owned()
     }
 
+    fn copy(&mut self, new_name: String) {
+        fs::copy(self.path.clone(), new_name).unwrap();
+    }
+
     fn delete(&mut self) {
         fs::remove_file(self.path.clone()).unwrap_or_default();
     }
@@ -529,12 +545,20 @@ impl Folder {
         list
     }
 
+    fn copy(&mut self, new_name: String) {
+        fs::copy(self.path.clone(), new_name).unwrap();
+    }
+
     fn delete(&mut self) {
         fs::remove_dir_all(self.path.clone()).unwrap();
     }
 
     fn rename(&mut self, name: String) {
         fs::rename(self.path.clone(), name).unwrap();
+    }
+
+    fn open(&mut self) {
+        open(self.path.clone()).unwrap_or_default();
     }
 }
 

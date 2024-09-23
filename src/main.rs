@@ -11,7 +11,6 @@ use std::{
 type FileObj = std::fs::File;
 
 fn main() {
-    println!("Objective Shell");
     let mut rl = DefaultEditor::new().unwrap();
     let mut sh = Shell {
         memory: HashMap::from([(
@@ -23,10 +22,10 @@ fn main() {
     };
 
     let args: Vec<String> = args().collect();
-
     if args.len() >= 2 {
         sh.run(read_to_string(args[1].clone()).unwrap());
     } else {
+        println!("Objective Shell");
         loop {
             let order = rl.readline(">>> ").unwrap().trim().to_string();
             if order.is_empty() {

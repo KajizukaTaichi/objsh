@@ -439,7 +439,7 @@ impl Type {
         match self {
             Type::App(App { name }) => format!("App( {name} )"),
             Type::File(File { path }) => format!("File( {path} )"),
-            Type::Folder(Folder { path }) => format!("File( {path} )"),
+            Type::Folder(Folder { path }) => format!("Folder( {path} )"),
             Type::Number(n) => n.to_string(),
             Type::String(s) => format!("\"{s}\""),
             Type::Array(a) => format!(

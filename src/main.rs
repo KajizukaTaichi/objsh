@@ -2,7 +2,8 @@ use opener::open;
 use rustyline::DefaultEditor;
 use std::{
     collections::HashMap,
-    fs::{self, read_dir},
+    env::args,
+    fs::{self, read_dir, read_to_string},
     io::{Read, Write},
     path::Path,
     process::Command,
@@ -21,13 +22,19 @@ fn main() {
         )]),
     };
 
-    loop {
-        let order = rl.readline(">>> ").unwrap().trim().to_string();
-        if order.is_empty() {
-            continue;
-        }
-        if let Some(result) = sh.run(order) {
-            println!("{}", result.display());
+    let args: Vec<String> = args().collect();
+
+    if args.len() >= 2 {
+        sh.run(read_to_string(args[1].clone()).unwrap());
+    } else {
+        loop {
+            let order = rl.readline(">>> ").unwrap().trim().to_string();
+            if order.is_empty() {
+                continue;
+            }
+            if let Some(result) = sh.run(order) {
+                println!("{}", result.display());
+            }
         }
     }
 }
@@ -154,6 +161,9 @@ impl Shell {
                         println!("{s}");
                         None
                     }
+                    "Input" => Some(Type::String(
+                        DefaultEditor::new().unwrap().readline(&s).unwrap(),
+                    )),
                     _ => None,
                 },
                 Type::Array(array) => match method.as_str() {
